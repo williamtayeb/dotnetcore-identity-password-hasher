@@ -24,10 +24,14 @@ export class PasswordHasher {
     this.iterCount = iterCount;
   }
 
-  public verifyHashedPassword(
+  /*public hashPassword(password: string): string {
+
+  }*/
+
+  public async verifyHashedPassword(
     hashedPassword: string,
     providedPassword: string
-  ): PasswordVerificationResult {
+  ): Promise<PasswordVerificationResult> {
     if (typeof hashedPassword === 'undefined' || hashedPassword === null) {
       throw 'Hashed password cannot be null or undefined.';
     }
@@ -50,7 +54,7 @@ export class PasswordHasher {
       case 0x01:
         this.embeddedIterCount = 0;
 
-        const match = this.verifyHashedPasswordV3(
+        const match = await this.verifyHashedPasswordV3(
           decodedHashedPassword,
           providedPassword
         );
@@ -68,10 +72,10 @@ export class PasswordHasher {
     }
   }
 
-  private verifyHashedPasswordV3(
+  private async verifyHashedPasswordV3(
     hashedPassword: Buffer,
     password: string
-  ): boolean {
+  ): Promise<boolean> {
     // Read header information
     const prf = PasswordHasher.readNetworkByteOrder(hashedPassword, 1);
     const iterCount = PasswordHasher.readNetworkByteOrder(hashedPassword, 5);
@@ -98,7 +102,7 @@ export class PasswordHasher {
     hashedPassword.copy(expectedSubkey, 0, 13 + salt.length);
 
     // Hash the incoming password and verify it
-    const actualSubkey = PasswordHasher.pbkdf2(
+    const actualSubkey = await PasswordHasher.pbkdf2(
       password,
       salt,
       prf,
@@ -115,7 +119,7 @@ export class PasswordHasher {
     prf: number,
     iterCount: number,
     length: number
-  ) {
+  ): Promise<Buffer> {
     let digest: string;
 
     switch (prf) {
@@ -129,7 +133,22 @@ export class PasswordHasher {
         throw 'Unknown PRF';
     }
 
-    return crypto.pbkdf2Sync(password, salt, iterCount, length, digest);
+    return new Promise(function(resolve, reject) {
+      crypto.pbkdf2(
+        password,
+        salt,
+        iterCount,
+        length,
+        digest,
+        (err, derivedKey) => {
+          if (err) {
+            throw err;
+          } else {
+            resolve(derivedKey);
+          }
+        }
+      );
+    });
   }
 
   private static readNetworkByteOrder(buffer: Buffer, offset: number): number {
