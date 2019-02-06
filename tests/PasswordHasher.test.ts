@@ -3,6 +3,54 @@ import {
   PasswordVerificationResult,
 } from '../src/PasswordHasher';
 
+describe('hashPasswordV3', () => {
+  it('Should not return empty string', async () => {
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher();
+    const hashedPassword = await hasher.hashPasswordV3(password);
+
+    expect(hashedPassword.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Should return base64 string', async () => {
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher();
+    const hashedPassword = await hasher.hashPasswordV3(password);
+
+    const checkBase64 = Buffer.from(hashedPassword, 'base64').toString(
+      'base64'
+    );
+
+    expect(checkBase64).toBe(hashedPassword);
+  });
+
+  it('Should not be idempotent', async () => {
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher();
+
+    const hashedPassword1 = await hasher.hashPasswordV3(password);
+    const hashedPassword2 = await hasher.hashPasswordV3(password);
+
+    const check = hashedPassword1 === hashedPassword2;
+
+    expect(check).toBeFalsy();
+  });
+
+  it('Should be able to be verified', async () => {
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher();
+
+    const hashedPassword = await hasher.hashPasswordV3(password);
+    const result = await hasher.verifyHashedPassword(hashedPassword, password);
+
+    expect(result).toBe(PasswordVerificationResult.Success);
+  });
+});
+
 describe('verifyHashedPassword', () => {
   it('Should return failed if the decoded hashed password length is zero', async () => {
     let hashedPassword: string = '';

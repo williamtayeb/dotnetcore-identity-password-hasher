@@ -8,7 +8,7 @@ export enum PasswordVerificationResult {
   SuccessRehashNeeded,
 }
 
-export enum PFR {
+export enum PRF {
   SHA1 = 0,
   SHA256 = 1,
 }
@@ -24,9 +24,41 @@ export class PasswordHasher {
     this.iterCount = iterCount;
   }
 
-  /*public hashPassword(password: string): string {
+  public async hashPasswordV3(password: string): Promise<string> {
+    const saltSize = 128 / 8;
+    const numBytesRequested = 256 / 8;
+    const prf = PRF.SHA256;
 
-  }*/
+    let salt = await PasswordHasher.randomBytes(saltSize);
+    let subkey = await PasswordHasher.pbkdf2(
+      password,
+      salt,
+      prf,
+      this.iterCount,
+      numBytesRequested
+    );
+
+    let outputBytes = Buffer.alloc(13 + salt.byteLength + subkey.byteLength);
+
+    outputBytes[0] = 0x01; // Format maker
+    PasswordHasher.writeNetworkByteOrder(outputBytes, 1, prf);
+    PasswordHasher.writeNetworkByteOrder(outputBytes, 5, this.iterCount);
+    PasswordHasher.writeNetworkByteOrder(outputBytes, 9, saltSize);
+
+    salt.copy(outputBytes, 13, 0, salt.byteLength);
+    subkey.copy(outputBytes, 13 + saltSize, 0, subkey.byteLength);
+
+    return outputBytes.toString('base64');
+  }
+
+  private static async randomBytes(size: number): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      crypto.randomBytes(size, (err, buffer) => {
+        if (err) throw err;
+        resolve(buffer);
+      });
+    });
+  }
 
   public async verifyHashedPassword(
     hashedPassword: string,
@@ -123,10 +155,10 @@ export class PasswordHasher {
     let digest: string;
 
     switch (prf) {
-      case PFR.SHA1:
+      case PRF.SHA1:
         digest = 'SHA1';
         break;
-      case PFR.SHA256:
+      case PRF.SHA256:
         digest = 'SHA256';
         break;
       default:
@@ -158,5 +190,16 @@ export class PasswordHasher {
       (Number(buffer[offset + 2]) << 8) |
       Number(buffer[offset + 3])
     );
+  }
+
+  private static writeNetworkByteOrder(
+    buffer: Buffer,
+    offset: number,
+    value: number
+  ): void {
+    buffer[offset + 0] = value >> 24;
+    buffer[offset + 1] = value >> 16;
+    buffer[offset + 2] = value >> 8;
+    buffer[offset + 3] = value >> 0;
   }
 }
