@@ -4,6 +4,91 @@ import {
   PasswordVerificationResult,
 } from '../src/PasswordHasher';
 
+describe('hashPassword', () => {
+  it('Should return a V2 hash if compability mode is set to IdentityV2', async () => {
+    const iterCount = 0;
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher(
+      iterCount,
+      PasswordHasherCompatibilityMode.IdentityV2
+    );
+
+    const hashedPassword = await hasher.hashPassword(password);
+    const decodedHashedPassword = Buffer.from(hashedPassword, 'base64');
+    const format = decodedHashedPassword[0];
+
+    expect(format).toBe(0x00);
+  });
+
+  it('Should return a V3 hash if compability mode is set to IdentityV3', async () => {
+    const iterCount = 10000;
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher(
+      iterCount,
+      PasswordHasherCompatibilityMode.IdentityV3
+    );
+
+    const hashedPassword = await hasher.hashPassword(password);
+    const decodedHashedPassword = Buffer.from(hashedPassword, 'base64');
+    const format = decodedHashedPassword[0];
+
+    expect(format).toBe(0x01);
+  });
+});
+
+describe('hashPasswordV2', () => {
+  it('Should not return empty string', async () => {
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher();
+    const hashedPassword = await hasher.hashPasswordV2(password);
+
+    expect(hashedPassword.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Should return base64 string', async () => {
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher();
+    const hashedPassword = await hasher.hashPasswordV2(password);
+
+    const checkBase64 = Buffer.from(hashedPassword, 'base64').toString(
+      'base64'
+    );
+
+    expect(checkBase64).toBe(hashedPassword);
+  });
+
+  it('Should not be idempotent', async () => {
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher();
+
+    const hashedPassword1 = await hasher.hashPasswordV2(password);
+    const hashedPassword2 = await hasher.hashPasswordV2(password);
+
+    const check = hashedPassword1 === hashedPassword2;
+
+    expect(check).toBeFalsy();
+  });
+
+  it('Should be able to be verified', async () => {
+    let password: string = 'password';
+
+    const hasher = new PasswordHasher(
+      0,
+      PasswordHasherCompatibilityMode.IdentityV2
+    );
+
+    const hashedPassword = await hasher.hashPasswordV2(password);
+    const result = await hasher.verifyHashedPassword(hashedPassword, password);
+
+    expect(result).toBe(PasswordVerificationResult.Success);
+  });
+});
+
 describe('hashPasswordV3', () => {
   it('Should not return empty string', async () => {
     let password: string = 'password';

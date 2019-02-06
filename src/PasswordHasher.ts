@@ -34,6 +34,39 @@ export class PasswordHasher {
     this.compatibilityMode = compatibilityMode;
   }
 
+  public async hashPassword(password: string): Promise<string> {
+    if (this.compatibilityMode === PasswordHasherCompatibilityMode.IdentityV2) {
+      return this.hashPasswordV2(password);
+    } else {
+      return this.hashPasswordV3(password);
+    }
+  }
+
+  public async hashPasswordV2(password: string): Promise<string> {
+    const prf = PRF.SHA1; // default for Rfc2898DeriveBytes
+    const iterCount = 1000; // default for Rfc2898DeriveBytes
+    const subkeyLength = 256 / 8; // 256 bits
+    const saltSize = 128 / 8; // 128 bits
+
+    let salt = await PasswordHasher.randomBytes(saltSize);
+    let subkey = await PasswordHasher.pbkdf2(
+      password,
+      salt,
+      prf,
+      iterCount,
+      subkeyLength
+    );
+
+    let outputBytes = Buffer.alloc(1 + salt.byteLength + subkey.byteLength);
+
+    outputBytes[0] = 0x00; // Format maker
+
+    salt.copy(outputBytes, 1, 0, salt.byteLength);
+    subkey.copy(outputBytes, 1 + saltSize, 0, subkey.byteLength);
+
+    return outputBytes.toString('base64');
+  }
+
   public async hashPasswordV3(password: string): Promise<string> {
     const saltSize = 128 / 8;
     const numBytesRequested = 256 / 8;
