@@ -1,4 +1,4 @@
-A useful library incase you are migrating user data including hashed passwords from a .NET Core stack to Node.js. Provides a Node.js implementation of ASP.NET Core Identity's Password Hasher including support for V2 and V3.
+A useful library incase you are migrating user data including hashed passwords from a .NET Core stack to Node.js. Provides a Node.js implementation of ASP.NET Core Identity's Password Hasher including verification support for both V2 and V3.
 
 # Getting Started
 
@@ -14,11 +14,14 @@ Or [`npm`](https://www.npmjs.com/):
 npm install aspnetcore-identity-password-hasher
 ```
 
+## Usage
+
 ```javascript
 const identity = require('aspnetcore-identity-password-hasher');
 ```
 
 **Generating a password hash:**
+
 Uses the V3 method to generate a password hash. See the note below if you are interested in using the old V2 method.
 
 ```javascript
@@ -30,6 +33,7 @@ identity.hash(password).then(hashedPassword => {
 ```
 
 **Verifying plain text password with associated hash:**
+
 Is able to verify both V2 and V3 hashes since the format type is included within the payload of the hash.
 
 ```javascript
@@ -41,4 +45,4 @@ identity.verify(password, hashedPassword).then(res => {
 
 # Note
 
-The original PasswordHasher class from .NET Core has been completely ported and is available in `src/PasswordHasher.t`. The class includes explicit method for generating V2 password hashes.
+The original _PasswordHasher_ class from .NET Core has been completely ported and is available in `src/PasswordHasher.ts`. The class includes explicit method for generating V2 password hashes.

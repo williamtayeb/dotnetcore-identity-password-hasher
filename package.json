@@ -6,7 +6,7 @@
   "repository": "https://github.com/williamtayeb/aspnetcore-identity-password-hasher",
   "author": "William Tayeb",
   "license": "MIT",
-  "private": true,
+  "private": false,
   "scripts": {
     "test": "jest --watchAll"
   },
