@@ -94,7 +94,7 @@ export class PasswordHasher {
     return outputBytes.toString('base64');
   }
 
-  private static async randomBytes(size: number): Promise<Buffer> {
+  private static async randomBytes(size: number): Promise<any> {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(size, (err, buffer) => {
         if (err) throw err;
