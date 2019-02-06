@@ -8,6 +8,11 @@ export enum PasswordVerificationResult {
   SuccessRehashNeeded,
 }
 
+export enum PasswordHasherCompatibilityMode {
+  IdentityV2,
+  IdentityV3,
+}
+
 export enum PRF {
   SHA1 = 0,
   SHA256 = 1,
@@ -15,13 +20,18 @@ export enum PRF {
 
 export class PasswordHasher {
   // Gets or sets the number of iterations used when hashing passwords using PBKDF2. Default is 10,000.
-  private iterCount: number = DEFAULT_ITER_COUNT;
+  private iterCount: number;
 
   // Used when verifying V3 hash
   private embeddedIterCount: number = 0;
+  private compatibilityMode: PasswordHasherCompatibilityMode;
 
-  constructor(iterCount: number = DEFAULT_ITER_COUNT) {
+  constructor(
+    iterCount: number = DEFAULT_ITER_COUNT,
+    compatibilityMode: PasswordHasherCompatibilityMode = PasswordHasherCompatibilityMode.IdentityV3
+  ) {
     this.iterCount = iterCount;
+    this.compatibilityMode = compatibilityMode;
   }
 
   public async hashPasswordV3(password: string): Promise<string> {
@@ -80,28 +90,73 @@ export class PasswordHasher {
 
     switch (decodedHashedPassword[0]) {
       case 0x00:
-        // TODO: Refactor
-        return PasswordVerificationResult.Failed;
-        break;
-      case 0x01:
-        this.embeddedIterCount = 0;
-
-        const match = await this.verifyHashedPasswordV3(
+        const matchV2 = await this.verifyHashedPasswordV2(
           decodedHashedPassword,
           providedPassword
         );
 
-        if (match) {
+        if (matchV2) {
+          // This is an old password hash format - the caller needs to rehash if we're not running in an older compat mode.
+          return this.compatibilityMode ===
+            PasswordHasherCompatibilityMode.IdentityV3
+            ? PasswordVerificationResult.SuccessRehashNeeded
+            : PasswordVerificationResult.Success;
+        } else {
+          return PasswordVerificationResult.Failed;
+        }
+
+      case 0x01:
+        this.embeddedIterCount = 0;
+
+        const matchV3 = await this.verifyHashedPasswordV3(
+          decodedHashedPassword,
+          providedPassword
+        );
+
+        if (matchV3) {
           return this.embeddedIterCount < this.iterCount
             ? PasswordVerificationResult.SuccessRehashNeeded
             : PasswordVerificationResult.Success;
         } else {
           return PasswordVerificationResult.Failed;
         }
+
       default:
         // Unknown format marker
         return PasswordVerificationResult.Failed;
     }
+  }
+
+  private async verifyHashedPasswordV2(
+    hashedPassword: Buffer,
+    password: string
+  ): Promise<boolean> {
+    const prf = PRF.SHA1; // default for Rfc2898DeriveBytes
+    const iterCount = 1000; // default for Rfc2898DeriveBytes
+    const subkeyLength = 256 / 8; // 256 bits
+    const saltSize = 128 / 8; // 128 bits
+
+    // We know ahead of time the exact length of a valid hashed password payload.
+    if (hashedPassword.byteLength != 1 + saltSize + subkeyLength) {
+      return false; // bad size
+    }
+
+    let salt = Buffer.alloc(saltSize);
+    hashedPassword.copy(salt, 0, 1);
+
+    let expectedSubkey = Buffer.alloc(subkeyLength);
+    hashedPassword.copy(expectedSubkey, 0, 1 + salt.byteLength);
+
+    // Hash the incoming password and verify it
+    const actualSubkey = await PasswordHasher.pbkdf2(
+      password,
+      salt,
+      prf,
+      iterCount,
+      subkeyLength
+    );
+
+    return actualSubkey.equals(expectedSubkey);
   }
 
   private async verifyHashedPasswordV3(
