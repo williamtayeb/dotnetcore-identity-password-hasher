@@ -1,8 +1,9 @@
 {
   "name": "aspnetcore-identity-password-hasher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "NodeJS implementation of ASP.NET Core Identity Password Hasher",
-  "main": "index.js",
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
   "repository": "https://github.com/williamtayeb/aspnetcore-identity-password-hasher",
   "author": "William Tayeb",
   "license": "MIT",
