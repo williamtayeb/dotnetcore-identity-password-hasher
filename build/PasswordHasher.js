@@ -1,13 +1,15 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.PasswordHasher = exports.PRF = exports.PasswordHasherCompatibilityMode = exports.PasswordVerificationResult = void 0;
 const crypto = require("crypto");
 const DEFAULT_ITER_COUNT = 10000;
 var PasswordVerificationResult;
@@ -25,6 +27,7 @@ var PRF;
 (function (PRF) {
     PRF[PRF["SHA1"] = 0] = "SHA1";
     PRF[PRF["SHA256"] = 1] = "SHA256";
+    PRF[PRF["SHA512"] = 2] = "SHA512";
 })(PRF = exports.PRF || (exports.PRF = {}));
 class PasswordHasher {
     constructor(iterCount = DEFAULT_ITER_COUNT, compatibilityMode = PasswordHasherCompatibilityMode.IdentityV3) {
@@ -180,6 +183,9 @@ class PasswordHasher {
                 break;
             case PRF.SHA256:
                 digest = 'SHA256';
+                break;
+            case PRF.SHA512:
+                digest = 'SHA512';
                 break;
             default:
                 throw 'Unknown PRF';

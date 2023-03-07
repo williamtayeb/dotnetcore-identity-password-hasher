@@ -9,7 +9,8 @@ export declare enum PasswordHasherCompatibilityMode {
 }
 export declare enum PRF {
     SHA1 = 0,
-    SHA256 = 1
+    SHA256 = 1,
+    SHA512 = 2
 }
 export declare class PasswordHasher {
     private iterCount;

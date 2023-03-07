@@ -16,6 +16,7 @@ export enum PasswordHasherCompatibilityMode {
 export enum PRF {
   SHA1 = 0,
   SHA256 = 1,
+  SHA512 = 2,
 }
 
 export class PasswordHasher {
@@ -248,6 +249,9 @@ export class PasswordHasher {
         break;
       case PRF.SHA256:
         digest = 'SHA256';
+        break;
+      case PRF.SHA512:
+        digest = 'SHA512';
         break;
       default:
         throw 'Unknown PRF';
